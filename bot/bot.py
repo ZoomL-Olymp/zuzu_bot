@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 
 from handlers import basic  # Импортируем handlers
 from config import BOT_TOKEN
+from db.database import init_db
 
 load_dotenv()
 
@@ -22,8 +23,11 @@ async def main():
 
     # Установка команд бота (для отображения в меню)
     await bot.set_my_commands([
-        BotCommand(command="/start", description="Начать работу с ботом")
+        BotCommand(command="/start", description="Начать работу с ботом"),
+        BotCommand(command="/help", description="Помощь")
     ])
+
+    init_db()
 
     await dp.start_polling(bot, skip_updates=True)
 

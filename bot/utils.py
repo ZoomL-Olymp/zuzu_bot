@@ -2,7 +2,8 @@ import re
 
 def clean_price_string(price_string):
     """Очищает строку с ценой от лишних символов (пробелов, валют)."""
-    price_string = price_string.replace(" ", "")  # Удаляем пробелы
+    price_string = price_string.replace(" ", "")  # Удаляем обычные пробелы
+    price_string = price_string.replace(" ", "")  # Удаляем неразрывные пробелы ( )
     price_string = re.sub(r'[^\d,.]', '', price_string)  # Удаляем все, кроме цифр, точек и запятых
 
     # Сначала заменяем все запятые на точки
