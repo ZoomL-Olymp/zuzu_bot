@@ -1,0 +1,56 @@
+# Python bytecode files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environment
+venv/
+.venv/
+env/
+.env/
+pip-wheel-metadata/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.dist-info/
+sdist/
+wheelhouse/
+
+# VS Code specific files
+.vscode/
+.history/
+*.code-workspace
+*.code-snippets
+
+# OS generated files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+*.stackdump
+*.log
+*.tmp
+*.bak
+*.swp
+*~
+*.orig
+*.pyi
+
+# Data and Database files (if you don't want to track them)
+data/temp_file.xlsx
+data/zuzu_bot.db
+# Alternatively, you can ignore the entire data folder if you don't track any files in it:
+# data/
+
+# Environment variables file
+.env
+
+# Selenium driver cache (if applicable)
+chromedriver_win32/
+chromedriver_linux64/
+chromedriver_mac64/
+geckodriver-v*
+msedgedriver-v*
+operadriver_*
