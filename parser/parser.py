@@ -4,39 +4,33 @@ from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from webdriver_manager.chrome import ChromeDriverManager
-import logging
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 import re
+import logging
+
+def clean_price_string(price_string):
+    """Очищает строку с ценой от лишних символов (пробелов, валют)."""
+    logging.info(f"Cleaning price string: {price_string}")
+    price_string = price_string.replace(" ", "")  # Удаляем обычные пробелы
+    price_string = price_string.replace(" ", "")  # Удаляем неразрывные пробелы ( )
+    price_string = re.sub(r'[^\d,.]', '', price_string)  # Удаляем все, кроме цифр, точек и запятых
+
+    # Сначала заменяем все запятые на точки
+    price_string = price_string.replace(",", ".")
+
+    #Удаляем все точки, кроме последней (если точек несколько)
+    if price_string.count('.') > 1:
+        parts = price_string.split('.')
+        price_string = "".join(parts[:-1]) + "." + parts[-1]
+
+    try:
+        return float(price_string)
+    except ValueError:
+        return None
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
-
-def clean_price_string(price_text):
-    """
-    Cleans the price string to extract a valid float value.
-
-    Args:
-        price_text (str): The raw price string from the webpage.
-
-    Returns:
-        float: The cleaned price as a float, or None if parsing fails.
-    """
-    cleaned_price = re.sub(r'[^\d.,]', '', price_text).strip()  # Remove non-numeric characters except ',' and '.'
-    cleaned_price = cleaned_price.replace(',', '.')  # Standardize decimal separator to '.'
-
-    if cleaned_price.count('.') > 1:
-        parts = cleaned_price.split('.')
-        # Check if it's a number with thousand separators (e.g., 1.234.567)
-        if all(len(part) <= 3 for part in parts[1:]):  # Correctly handles thousand separators
-              cleaned_price =  ''.join(parts) # if so remove dots
-        else:
-             return None # if not, price is not valid.
-
-    try:
-        return float(cleaned_price)  # Convert to float
-    except ValueError:
-        return None  # Return None if conversion fails
-
 
 def parse_website_price(url, xpath):
     """
@@ -60,9 +54,15 @@ def parse_website_price(url, xpath):
 
     try:
         driver.get(url)  # Navigate to the URL
-        driver.implicitly_wait(10)  # Wait up to 10 seconds for elements to appear
+        wait = WebDriverWait(driver, 10)  # Wait up to 10 seconds
+        wait.until(EC.presence_of_element_located((By.XPATH, xpath)))
 
         price_elements = driver.find_elements(By.XPATH, xpath)  # Find all elements matching the XPath
+        if not price_elements:
+            logging.warning(f"No elements found with XPath: {xpath} on {url}")
+            return None  # Return None if no elements are found
+
+        # Extract and clean the prices
         prices = []
         for price_element in price_elements:
             price_text = price_element.text  # Get the text content of the element

@@ -8,7 +8,7 @@ from aiogram.types import BotCommand
 from aiogram.client.default import DefaultBotProperties
 from dotenv import load_dotenv
 
-from handlers import basic  # Импортируем handlers
+from bot.handlers import basic
 from config import BOT_TOKEN
 from db.database import init_db
 
