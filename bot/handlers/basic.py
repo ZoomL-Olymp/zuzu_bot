@@ -1,10 +1,11 @@
 import os
 import pandas as pd
-from aiogram import Router, types, F, Bot  # Добавлен Bot в импорт
+import sqlite3
+from aiogram import Router, types, F, Bot
 from aiogram.filters import CommandStart
 from aiogram.types import Message
-from db.database import save_website_data, init_db
-from utils import clean_price_string
+from db.database import save_website_data
+from typing import Optional
 
 
 router = Router()
@@ -20,7 +21,8 @@ async def command_start_handler(message: Message) -> None:
                          "- Колонка 'xpath' - XPath к элементу с ценой")
 
 @router.message(F.document)
-async def handle_document(message: types.Message, bot: Bot): # Исправленная аннотация типа
+async def handle_document(message: types.Message, bot: Bot, conn: Optional[sqlite3.Connection] = None): # Add optional conn
+    """Handles document messages, expecting an Excel file."""
     if message.document.file_name.endswith(('.xls', '.xlsx')):
         try:
             file_id = message.document.file_id
@@ -30,31 +32,32 @@ async def handle_document(message: types.Message, bot: Bot): # Исправле�
 
             df = pd.read_excel(TEMP_FILE_PATH)
 
-            # Проверка наличия необходимых колонок
             required_columns = ['title', 'url', 'xpath']
-            for col in required_columns:
-                if col not in df.columns:
-                    await message.answer(f"Ошибка: В файле отсутствует колонка '{col}'.")
-                    os.remove(TEMP_FILE_PATH)
-                    return
+            if not all(col in df.columns for col in required_columns):
+                missing_cols = [col for col in required_columns if col not in df.columns]
+                await message.answer(f"Ошибка: В файле отсутствуют колонки: {', '.join(missing_cols)}.")
+                os.remove(TEMP_FILE_PATH)
+                return
 
-            # Вывод содержимого пользователю
+            # Check if DataFrame is empty after reading
+            if df.empty:
+                await message.answer("Файл Excel пуст. Данные не загружены.")
+                return
+            
             output_text = "Содержимое файла:\n\n"
-            for index, row in df.iterrows():
+            for _, row in df.iterrows():  # Use _ for unused index
                 output_text += f"<b>{row['title']}</b>\n"
                 output_text += f"URL: {row['url']}\n"
                 output_text += f"XPath: {row['xpath']}\n\n"
             await message.answer(output_text, parse_mode="HTML")
 
-            # Сохранение в БД
             websites_data = df.to_dict('records')
-            save_website_data(websites_data)
+            save_website_data(websites_data, conn)  # Pass the connection
             await message.answer("Данные сохранены в базу данных.")
-
-            os.remove(TEMP_FILE_PATH)
 
         except Exception as e:
             await message.answer(f"Произошла ошибка при обработке файла: {e}")
+        finally:  # Use finally to *always* delete the file
             if os.path.exists(TEMP_FILE_PATH):
                 os.remove(TEMP_FILE_PATH)
     else:

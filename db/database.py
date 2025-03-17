@@ -1,11 +1,14 @@
-import sqlite_utils
+import sqlite3
 
-DATABASE_NAME = "data/zuzu_bot.db" # Путь к файлу БД
+DATABASE_NAME = "data/zuzu_bot.db"  # Path to the database file
 
-def init_db():
-    """Создает базу данных и таблицу, если их нет."""
-    db = sqlite_utils.Database(DATABASE_NAME)
-    db.execute("""
+
+def init_db(conn=None):
+    """Creates the database and table if they don't exist."""
+    if conn is None:
+        conn = sqlite3.connect(DATABASE_NAME)  # Connect if no connection provided
+    cursor = conn.cursor()
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS websites (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT,
@@ -13,17 +16,29 @@ def init_db():
             xpath TEXT
         )
     """)
+    conn.commit()
+    if conn is None: #close if we just opened
+       conn.close()
 
-def save_website_data(websites_data):
-    """Сохраняет данные о сайтах в базу данных."""
-    db = sqlite_utils.Database(DATABASE_NAME)
-    table = db["websites"]
-    table.insert_all(websites_data, pk="id") # pk="id" чтобы избежать ошибок, если id уже существует (в данном случае не должно, но на всякий случай)
 
-def get_all_websites():
-    """Возвращает все сайты из базы данных."""
-    db = sqlite_utils.Database(DATABASE_NAME)
-    return list(db.query("SELECT id, title, url, xpath FROM websites"))
 
-# Инициализация БД при импорте модуля (можно и в main.py при запуске)
-init_db()
+def save_website_data(websites_data, conn=None):
+    """Saves website data to the database."""
+    if conn is None:
+        conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+
+    cursor.executemany("INSERT INTO websites (title, url, xpath) VALUES (?, ?, ?)",
+                       [(data['title'], data['url'], data['xpath']) for data in websites_data])
+    conn.commit()
+    if conn is None:
+        conn.close()
+
+def get_all_websites(conn=None):
+    """Retrieves all websites from the database."""
+    if conn is None:
+        conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, title, url, xpath FROM websites")
+    columns = [col[0] for col in cursor.description]  # Get column names
+    return [dict(zip(columns, row)) for row in cursor.fetchall()] # Return list of dicts
